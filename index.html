@@ -463,6 +463,92 @@
     .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
     .empty-state p { font-size: 0.9rem; font-weight: 500; }
 
+    /* ── 오답노트 배너 ── */
+    .wrong-note-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      border: 1.5px solid #EBEBEB;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 28px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .wrong-note-banner:hover { border-color: #FF385C; box-shadow: 0 2px 16px rgba(255,56,92,0.1); }
+    .wrong-note-banner-left { display: flex; align-items: center; gap: 14px; }
+    .wrong-note-icon {
+      width: 44px; height: 44px;
+      background: #FFF0F3;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .wrong-note-title { font-size: 0.95rem; font-weight: 700; color: #222222; }
+    .wrong-note-sub { font-size: 0.78rem; color: #717171; margin-top: 2px; }
+    .wrong-note-count {
+      background: #FF385C;
+      color: white;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      min-width: 36px;
+      text-align: center;
+    }
+    .wrong-note-count.empty { background: #EBEBEB; color: #B0B0B0; }
+
+    /* ── 오답노트 화면 ── */
+    .wrong-note-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .wrong-note-screen-title { font-size: 1.3rem; font-weight: 800; color: #222222; }
+    .btn-clear {
+      padding: 7px 14px;
+      border: 1.5px solid #DDDDDD;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      color: #717171;
+      transition: all 0.2s;
+    }
+    .btn-clear:hover { border-color: #FF385C; color: #FF385C; }
+
+    .wrong-item {
+      background: white;
+      border: 1.5px solid #EBEBEB;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .wrong-item:hover { border-color: #DDDDDD; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+    .wrong-item.expanded { border-color: #FF385C; }
+    .wrong-item-header { display: flex; align-items: flex-start; gap: 10px; }
+    .wrong-item-question { font-size: 0.9rem; font-weight: 600; line-height: 1.5; color: #222222; }
+    .wrong-item-body { margin-top: 14px; display: none; }
+    .wrong-item.expanded .wrong-item-body { display: block; }
+    .wrong-count-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #FF385C;
+      background: #FFF0F3;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 480px) {
       .home-title { font-size: 1.6rem; }
       .subject-grid { grid-template-columns: 1fr 1fr 1fr; }
@@ -529,6 +615,18 @@
     </button>
   </div>
 
+  <div class="section-label">오답 관리</div>
+  <div class="wrong-note-banner" onclick="showWrongNote()">
+    <div class="wrong-note-banner-left">
+      <div class="wrong-note-icon">❌</div>
+      <div>
+        <div class="wrong-note-title">오답노트</div>
+        <div class="wrong-note-sub" id="wrongNoteSub">틀린 문제를 모아서 복습하세요</div>
+      </div>
+    </div>
+    <div class="wrong-note-count empty" id="wrongNoteCount">0</div>
+  </div>
+
 </div>
 
 <!-- ══════════════ 퀴즈 화면 ══════════════ -->
@@ -572,6 +670,18 @@
   </div>
 </div>
 
+<!-- ══════════════ 오답노트 화면 ══════════════ -->
+<div class="screen" id="wrongNoteScreen">
+  <div class="wrong-note-header">
+    <div class="wrong-note-screen-title">❌ 오답노트</div>
+    <button class="btn-clear" onclick="clearWrongNote()">전체 초기화</button>
+  </div>
+  <div style="display:flex; gap:10px; margin-bottom:20px;">
+    <button class="btn-primary" id="wrongQuizBtn" onclick="startWrongQuiz()" style="flex:1; padding:13px;">틀린 문제만 다시 풀기</button>
+  </div>
+  <div id="wrongNoteList"></div>
+</div>
+
 <!-- ══════════════ 검색 화면 ══════════════ -->
 <div class="screen" id="searchScreen">
   <div class="search-box-wrap">
@@ -602,6 +712,45 @@
   let answered = false;
   let searchFilter = 'all';
   const QUIZ_COUNT = 20;
+
+  // ── 오답노트 (localStorage) ──
+  function getWrongNote() {
+    try { return JSON.parse(localStorage.getItem('cbt_wrong') || '{}'); } catch { return {}; }
+  }
+  function saveWrongNote(data) {
+    localStorage.setItem('cbt_wrong', JSON.stringify(data));
+  }
+  function addWrong(q) {
+    const note = getWrongNote();
+    const key = q.subject + '_' + q.id;
+    if (note[key]) {
+      note[key].count = (note[key].count || 1) + 1;
+    } else {
+      note[key] = { ...q, count: 1 };
+    }
+    saveWrongNote(note);
+    updateWrongBanner();
+  }
+  function removeWrong(q) {
+    const note = getWrongNote();
+    const key = q.subject + '_' + q.id;
+    delete note[key];
+    saveWrongNote(note);
+    updateWrongBanner();
+  }
+  function updateWrongBanner() {
+    const note = getWrongNote();
+    const cnt = Object.keys(note).length;
+    const countEl = document.getElementById('wrongNoteCount');
+    const subEl = document.getElementById('wrongNoteSub');
+    if (countEl) {
+      countEl.textContent = cnt;
+      countEl.classList.toggle('empty', cnt === 0);
+    }
+    if (subEl) {
+      subEl.textContent = cnt > 0 ? `${cnt}개 문제 저장됨 · 탭해서 복습하기` : '틀린 문제를 모아서 복습하세요';
+    }
+  }
 
   // ── 과목 선택 ──
   function toggleSubject(sub) {
@@ -689,7 +838,12 @@
       if (num === selected && selected === correct) btn.classList.add('correct');
     });
 
-    if (selected === correct) score++;
+    if (selected === correct) {
+      score++;
+      removeWrong(quizQuestions[currentIdx]);
+    } else {
+      addWrong(quizQuestions[currentIdx]);
+    }
 
     if (explanation) {
       document.getElementById('explanationText').textContent = explanation;
@@ -724,6 +878,66 @@
     document.getElementById('resultLabel').textContent = `정답률 ${pct}% · ${label}`;
 
     showScreen('resultScreen');
+  }
+
+  // ── 오답노트 화면 ──
+  function showWrongNote() {
+    showScreen('wrongNoteScreen');
+    renderWrongNote();
+  }
+  function renderWrongNote() {
+    const note = getWrongNote();
+    const items = Object.values(note);
+    const list = document.getElementById('wrongNoteList');
+    const btn = document.getElementById('wrongQuizBtn');
+    if (items.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎉</div><p>오답노트가 비어있어요!<br>틀린 문제가 없거나 다 맞췄어요.</p></div>`;
+      btn.disabled = true;
+      btn.style.opacity = '0.4';
+      return;
+    }
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.textContent = `틀린 문제 ${items.length}개 다시 풀기`;
+    list.innerHTML = items.map((q, idx) => {
+      const subLabel = q.subject === 'climate' ? '🌍 기후변화' : '📊 ESG';
+      return `
+        <div class="wrong-item" id="wi-${idx}" onclick="toggleWrongItem(${idx})">
+          <div class="wrong-item-header">
+            <span class="result-badge ${q.subject === 'climate' ? 'badge-climate' : 'badge-esg'}">${subLabel}</span>
+            <div class="wrong-item-question">${q.question}</div>
+            <span class="wrong-count-tag">×${q.count}</span>
+          </div>
+          <div class="wrong-item-body">
+            ${q.choices.map((c, i) => `
+              <div class="result-choice ${i + 1 === q.answer ? 'answer' : ''}">
+                <span>${i + 1}.</span><span>${c}${i + 1 === q.answer ? ' ✅' : ''}</span>
+              </div>
+            `).join('')}
+            ${q.explanation ? `<div class="result-explanation">💡 ${q.explanation}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+  function toggleWrongItem(idx) {
+    document.getElementById('wi-' + idx).classList.toggle('expanded');
+  }
+  function clearWrongNote() {
+    if (!confirm('오답노트를 전체 초기화할까요?')) return;
+    localStorage.removeItem('cbt_wrong');
+    updateWrongBanner();
+    renderWrongNote();
+  }
+  function startWrongQuiz() {
+    const note = getWrongNote();
+    const items = Object.values(note);
+    if (items.length === 0) { alert('오답노트가 비어있어요!'); return; }
+    const pool = items.sort(() => Math.random() - 0.5);
+    quizQuestions = pool.slice(0, Math.min(QUIZ_COUNT, pool.length));
+    currentIdx = 0;
+    score = 0;
+    showScreen('quizScreen');
+    renderQuestion();
   }
 
   // ── 검색 ──
@@ -801,7 +1015,10 @@
     window.scrollTo(0, 0);
   }
 
-  function goHome() { showScreen('homeScreen'); }
+  function goHome() { showScreen('homeScreen'); updateWrongBanner(); }
+
+  // ── 초기화 ──
+  updateWrongBanner();
 </script>
 </body>
 </html>
