@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CBT 문제은행</title>
+  <script src="questions.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      color: #1a202c;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      background: linear-gradient(135deg, #2d6a4f, #1b4332);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header .subtitle { font-size: 0.8rem; opacity: 0.8; }
+    .back-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-left: auto;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.35); }
+
+    /* ── 공통 레이아웃 ── */
+    .screen { display: none; max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+    .screen.active { display: block; }
+
+    /* ── 홈 화면 ── */
+    .home-title {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #1b4332;
+    }
+    .home-desc {
+      text-align: center;
+      color: #6b7280;
+      margin-bottom: 28px;
+      font-size: 0.9rem;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    /* 과목 카드 */
+    .subject-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .subject-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    .subject-card:hover { border-color: #2d6a4f; transform: translateY(-2px); }
+    .subject-card.selected {
+      border-color: #2d6a4f;
+      background: #d8f3dc;
+    }
+    .subject-card .icon { font-size: 2rem; margin-bottom: 6px; }
+    .subject-card .name { font-size: 0.8rem; font-weight: 700; color: #374151; }
+    .subject-card .count { font-size: 0.72rem; color: #9ca3af; margin-top: 2px; }
+
+    /* 모드 버튼 */
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .mode-btn {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      background: white;
+      text-align: left;
+      transition: all 0.2s;
+    }
+    .mode-btn:hover { border-color: #2d6a4f; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .mode-btn .mode-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .mode-btn .mode-name { font-weight: 700; font-size: 1rem; color: #1a202c; }
+    .mode-btn .mode-desc { font-size: 0.8rem; color: #6b7280; margin-top: 4px; }
+
+    /* ── 퀴즈 화면 ── */
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .quiz-progress { font-size: 0.85rem; color: #6b7280; }
+    .quiz-score {
+      background: #d8f3dc;
+      color: #1b4332;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .progress-bar {
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2d6a4f, #52b788);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    .question-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    .question-meta {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+    .question-text {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.6;
+      color: #1a202c;
+    }
+
+    .choices { display: flex; flex-direction: column; gap: 10px; }
+    .choice-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      background: white;
+      text-align: left;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .choice-btn:hover:not(:disabled) { border-color: #2d6a4f; background: #f0fdf4; }
+    .choice-btn .num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #f3f4f6;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .choice-btn.correct { border-color: #16a34a; background: #f0fdf4; }
+    .choice-btn.correct .num { background: #16a34a; color: white; }
+    .choice-btn.wrong { border-color: #dc2626; background: #fef2f2; }
+    .choice-btn.wrong .num { background: #dc2626; color: white; }
+    .choice-btn.show-correct { border-color: #16a34a; background: #f0fdf4; }
+    .choice-btn.show-correct .num { background: #16a34a; color: white; }
+    .choice-btn:disabled { cursor: default; }
+
+    .explanation-box {
+      background: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.87rem;
+      line-height: 1.6;
+      color: #374151;
+      margin-top: 14px;
+      display: none;
+    }
+    .explanation-box.show { display: block; }
+    .explanation-label {
+      font-weight: 700;
+      color: #16a34a;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+
+    .quiz-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-primary {
+      flex: 1;
+      padding: 14px;
+      background: linear-gradient(135deg, #2d6a4f, #1b4332);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary {
+      padding: 14px 20px;
+      background: white;
+      color: #374151;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: #2d6a4f; color: #2d6a4f; }
+
+    /* ── 결과 화면 ── */
+    .result-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-bottom: 20px;
+    }
+    .result-emoji { font-size: 3.5rem; margin-bottom: 12px; }
+    .result-score { font-size: 2.5rem; font-weight: 800; color: #1b4332; }
+    .result-label { font-size: 0.9rem; color: #6b7280; margin-top: 4px; }
+    .result-actions { display: flex; gap: 12px; flex-direction: column; }
+
+    /* ── 검색 화면 ── */
+    .search-box-wrap { position: relative; margin-bottom: 20px; }
+    .search-input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 1rem;
+      background: white;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .search-input:focus { border-color: #2d6a4f; }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      color: #9ca3af;
+    }
+    .search-filter { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 6px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .filter-btn.active { border-color: #2d6a4f; background: #d8f3dc; color: #1b4332; }
+
+    .search-results { display: flex; flex-direction: column; gap: 12px; }
+    .search-count { font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; }
+
+    .result-item {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .result-item:hover { border-color: #2d6a4f; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .result-item.expanded { border-color: #2d6a4f; }
+    .result-item-header { display: flex; align-items: flex-start; gap: 10px; }
+    .result-badge {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-climate { background: #d8f3dc; color: #1b4332; }
+    .badge-esg { background: #dbeafe; color: #1e40af; }
+    .result-item-question { font-size: 0.9rem; font-weight: 600; line-height: 1.5; }
+    .result-item-body { margin-top: 12px; display: none; }
+    .result-item.expanded .result-item-body { display: block; }
+    .result-choice {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      display: flex;
+      gap: 8px;
+    }
+    .result-choice.answer { background: #f0fdf4; border: 1.5px solid #16a34a; font-weight: 600; }
+    .result-choice:not(.answer) { background: #f9fafb; color: #6b7280; }
+    .result-explanation {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #f0fdf4;
+      border-left: 3px solid #16a34a;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      line-height: 1.6;
+      color: #374151;
+    }
+
+    mark { background: #fef9c3; border-radius: 3px; padding: 0 2px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #9ca3af;
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    @media (max-width: 480px) {
+      .subject-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .mode-grid { grid-template-columns: 1fr; }
+      .subject-card .name { font-size: 0.72rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📚 CBT 문제은행</h1>
+    <div class="subtitle">기말고사 대비</div>
+  </div>
+  <button class="back-btn" id="backBtn" style="display:none" onclick="goHome()">← 홈</button>
+</header>
+
+<!-- ══════════════ 홈 화면 ══════════════ -->
+<div class="screen active" id="homeScreen">
+  <p class="home-title">기말고사 준비 🎯</p>
+  <p class="home-desc">과목을 선택하고 학습 모드를 고르세요</p>
+
+  <div class="section-title">과목 선택 (중복 가능)</div>
+  <div class="subject-grid">
+    <div class="subject-card selected" id="card-climate" onclick="toggleSubject('climate')">
+      <div class="icon">🌍</div>
+      <div class="name">기후변화<br>완화와 적응</div>
+      <div class="count">130문제</div>
+    </div>
+    <div class="subject-card selected" id="card-esg" onclick="toggleSubject('esg')">
+      <div class="icon">📊</div>
+      <div class="name">ESG와<br>미래가치 창출</div>
+      <div class="count">46문제</div>
+    </div>
+    <div class="subject-card selected" id="card-both" onclick="selectBoth()">
+      <div class="icon">🔀</div>
+      <div class="name">전체<br>랜덤</div>
+      <div class="count">176문제</div>
+    </div>
+  </div>
+
+  <div class="section-title">학습 모드</div>
+  <div class="mode-grid">
+    <button class="mode-btn" onclick="startQuiz()">
+      <div class="mode-icon">🎲</div>
+      <div class="mode-name">랜덤 퀴즈</div>
+      <div class="mode-desc">선택한 과목에서 문제를 랜덤으로 출제</div>
+    </button>
+    <button class="mode-btn" onclick="showSearch()">
+      <div class="mode-icon">🔍</div>
+      <div class="mode-name">키워드 검색</div>
+      <div class="mode-desc">키워드로 관련 문제를 모아서 확인</div>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════ 퀴즈 화면 ══════════════ -->
+<div class="screen" id="quizScreen">
+  <div class="quiz-header">
+    <div class="quiz-progress" id="quizProgress">1 / 10</div>
+    <div class="quiz-score" id="quizScore">✅ 0 / 0</div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <div class="question-card">
+    <div class="question-meta" id="questionMeta"></div>
+    <div class="question-text" id="questionText"></div>
+  </div>
+
+  <div class="choices" id="choicesContainer"></div>
+
+  <div class="explanation-box" id="explanationBox">
+    <div class="explanation-label">💡 해설</div>
+    <div id="explanationText"></div>
+  </div>
+
+  <div class="quiz-actions">
+    <button class="btn-secondary" id="skipBtn" onclick="nextQuestion()">건너뛰기</button>
+    <button class="btn-primary" id="nextBtn" onclick="nextQuestion()" style="display:none">다음 문제 →</button>
+  </div>
+</div>
+
+<!-- ══════════════ 결과 화면 ══════════════ -->
+<div class="screen" id="resultScreen">
+  <div class="result-card">
+    <div class="result-emoji" id="resultEmoji"></div>
+    <div class="result-score" id="resultScore"></div>
+    <div class="result-label" id="resultLabel"></div>
+  </div>
+  <div class="result-actions">
+    <button class="btn-primary" onclick="startQuiz()">🔄 다시 풀기</button>
+    <button class="btn-secondary" onclick="goHome()">🏠 홈으로</button>
+  </div>
+</div>
+
+<!-- ══════════════ 검색 화면 ══════════════ -->
+<div class="screen" id="searchScreen">
+  <div class="search-box-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput" type="text"
+      placeholder="키워드 입력 (예: 탄소중립, ESG, 파리협정...)"
+      oninput="doSearch()">
+  </div>
+  <div class="search-filter">
+    <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">전체</button>
+    <button class="filter-btn" id="filter-climate" onclick="setFilter('climate')">🌍 기후변화</button>
+    <button class="filter-btn" id="filter-esg" onclick="setFilter('esg')">📊 ESG</button>
+  </div>
+  <div id="searchResultsArea">
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div>키워드를 입력하면 관련 문제가 나타납니다</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── 상태 ──
+  let selectedSubjects = ['climate', 'esg'];
+  let quizQuestions = [];
+  let currentIdx = 0;
+  let score = 0;
+  let answered = false;
+  let searchFilter = 'all';
+  const QUIZ_COUNT = 20;
+
+  // ── 과목 선택 ──
+  function toggleSubject(sub) {
+    if (sub === 'climate' || sub === 'esg') {
+      const idx = selectedSubjects.indexOf(sub);
+      if (idx > -1) {
+        if (selectedSubjects.length > 1) selectedSubjects.splice(idx, 1);
+      } else {
+        selectedSubjects.push(sub);
+      }
+    }
+    updateSubjectCards();
+  }
+
+  function selectBoth() {
+    selectedSubjects = ['climate', 'esg'];
+    updateSubjectCards();
+  }
+
+  function updateSubjectCards() {
+    document.getElementById('card-climate').classList.toggle('selected', selectedSubjects.includes('climate'));
+    document.getElementById('card-esg').classList.toggle('selected', selectedSubjects.includes('esg'));
+    const both = selectedSubjects.includes('climate') && selectedSubjects.includes('esg');
+    document.getElementById('card-both').classList.toggle('selected', both);
+  }
+
+  // ── 퀴즈 시작 ──
+  function startQuiz() {
+    let pool = [];
+    if (selectedSubjects.includes('climate')) {
+      pool = pool.concat(questions.climate.map(q => ({...q, subject: 'climate'})));
+    }
+    if (selectedSubjects.includes('esg')) {
+      pool = pool.concat(questions.esg.map(q => ({...q, subject: 'esg'})));
+    }
+    if (pool.length === 0) { alert('과목을 선택해주세요!'); return; }
+
+    // 셔플
+    pool = pool.sort(() => Math.random() - 0.5);
+    quizQuestions = pool.slice(0, Math.min(QUIZ_COUNT, pool.length));
+    currentIdx = 0;
+    score = 0;
+
+    showScreen('quizScreen');
+    renderQuestion();
+  }
+
+  // ── 문제 렌더링 ──
+  function renderQuestion() {
+    answered = false;
+    const q = quizQuestions[currentIdx];
+    const total = quizQuestions.length;
+
+    document.getElementById('quizProgress').textContent = `${currentIdx + 1} / ${total}`;
+    document.getElementById('quizScore').textContent = `✅ ${score} / ${currentIdx}`;
+    document.getElementById('progressFill').style.width = `${(currentIdx / total) * 100}%`;
+
+    const subLabel = q.subject === 'climate' ? '🌍 기후변화' : '📊 ESG';
+    const weekLabel = q.week ? ` · ${q.week}주차` : '';
+    document.getElementById('questionMeta').textContent = subLabel + weekLabel;
+    document.getElementById('questionText').textContent = q.question;
+
+    const container = document.getElementById('choicesContainer');
+    container.innerHTML = '';
+    q.choices.forEach((choice, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<span class="num">${i + 1}</span><span>${choice}</span>`;
+      btn.onclick = () => selectAnswer(i + 1, q.answer, q.explanation);
+      container.appendChild(btn);
+    });
+
+    document.getElementById('explanationBox').classList.remove('show');
+    document.getElementById('skipBtn').style.display = 'inline-block';
+    document.getElementById('nextBtn').style.display = 'none';
+  }
+
+  // ── 답 선택 ──
+  function selectAnswer(selected, correct, explanation) {
+    if (answered) return;
+    answered = true;
+
+    const btns = document.querySelectorAll('.choice-btn');
+    btns.forEach((btn, i) => {
+      btn.disabled = true;
+      const num = i + 1;
+      if (num === correct) btn.classList.add('show-correct');
+      if (num === selected && selected !== correct) btn.classList.add('wrong');
+      if (num === selected && selected === correct) btn.classList.add('correct');
+    });
+
+    if (selected === correct) score++;
+
+    if (explanation) {
+      document.getElementById('explanationText').textContent = explanation;
+      document.getElementById('explanationBox').classList.add('show');
+    }
+
+    document.getElementById('skipBtn').style.display = 'none';
+    document.getElementById('nextBtn').style.display = 'inline-block';
+  }
+
+  // ── 다음 문제 ──
+  function nextQuestion() {
+    currentIdx++;
+    if (currentIdx >= quizQuestions.length) {
+      showResult();
+    } else {
+      renderQuestion();
+    }
+  }
+
+  // ── 결과 ──
+  function showResult() {
+    const total = quizQuestions.length;
+    const pct = Math.round((score / total) * 100);
+    let emoji = '😅'; let label = '더 열심히 공부해봐요!';
+    if (pct >= 90) { emoji = '🏆'; label = '완벽해요! 시험 걱정 없겠는데요?'; }
+    else if (pct >= 70) { emoji = '👍'; label = '잘 하고 있어요! 조금만 더!'; }
+    else if (pct >= 50) { emoji = '📚'; label = '절반은 맞았어요. 복습이 필요해요!'; }
+
+    document.getElementById('resultEmoji').textContent = emoji;
+    document.getElementById('resultScore').textContent = `${score} / ${total}`;
+    document.getElementById('resultLabel').textContent = `정답률 ${pct}% · ${label}`;
+
+    showScreen('resultScreen');
+  }
+
+  // ── 검색 ──
+  function showSearch() {
+    showScreen('searchScreen');
+    document.getElementById('searchInput').focus();
+  }
+
+  function setFilter(f) {
+    searchFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('filter-' + f).classList.add('active');
+    doSearch();
+  }
+
+  function doSearch() {
+    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    const area = document.getElementById('searchResultsArea');
+
+    if (!keyword) {
+      area.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>키워드를 입력하면 관련 문제가 나타납니다</div></div>`;
+      return;
+    }
+
+    let pool = [];
+    if (searchFilter !== 'esg') pool = pool.concat(questions.climate.map(q => ({...q, subject:'climate'})));
+    if (searchFilter !== 'climate') pool = pool.concat(questions.esg.map(q => ({...q, subject:'esg'})));
+
+    const results = pool.filter(q => {
+      const text = [q.question, ...q.choices, q.explanation || ''].join(' ').toLowerCase();
+      return text.includes(keyword);
+    });
+
+    if (results.length === 0) {
+      area.innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div><div>'${keyword}' 관련 문제가 없어요</div></div>`;
+      return;
+    }
+
+    const highlight = (text) => text.replace(new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+      m => `<mark>${m}</mark>`);
+
+    area.innerHTML = `<div class="search-count">🔎 <b>${results.length}개</b> 문제 발견</div>
+      <div class="search-results">
+        ${results.map((q, idx) => `
+          <div class="result-item" id="ri-${idx}" onclick="toggleResult(${idx})">
+            <div class="result-item-header">
+              <span class="result-badge ${q.subject === 'climate' ? 'badge-climate' : 'badge-esg'}">
+                ${q.subject === 'climate' ? '🌍 기후변화' + (q.week ? ' ' + q.week + '주' : '') : '📊 ESG'}
+              </span>
+              <div class="result-item-question">${highlight(q.question)}</div>
+            </div>
+            <div class="result-item-body">
+              ${q.choices.map((c, i) => `
+                <div class="result-choice ${i + 1 === q.answer ? 'answer' : ''}">
+                  <span>${i + 1}.</span><span>${highlight(c)}${i + 1 === q.answer ? ' ✅' : ''}</span>
+                </div>
+              `).join('')}
+              ${q.explanation ? `<div class="result-explanation">💡 ${highlight(q.explanation)}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  function toggleResult(idx) {
+    const el = document.getElementById('ri-' + idx);
+    el.classList.toggle('expanded');
+  }
+
+  // ── 화면 전환 ──
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('backBtn').style.display = id === 'homeScreen' ? 'none' : 'block';
+    window.scrollTo(0, 0);
+  }
+
+  function goHome() { showScreen('homeScreen'); }
+</script>
+</body>
+</html>
