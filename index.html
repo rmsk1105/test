@@ -126,7 +126,7 @@
     /* 과목 카드 */
     .subject-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 32px;
     }
@@ -428,6 +428,7 @@
     }
     .badge-climate { background: #FFF0F3; color: #FF385C; }
     .badge-esg { background: #EBF5FF; color: #0066CC; }
+    .badge-extra { background: #FFF8EB; color: #B45309; }
     .result-item-question { font-size: 0.9rem; font-weight: 600; line-height: 1.5; color: #222222; }
     .result-item-body { margin-top: 14px; display: none; }
     .result-item.expanded .result-item-body { display: block; }
@@ -549,11 +550,55 @@
       flex-shrink: 0;
     }
 
+    /* ── 문제+답 보기 화면 ── */
+    .sheet-filter { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .sheet-item {
+      background: white;
+      border: 1.5px solid #EBEBEB;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 10px;
+    }
+    .sheet-item-q {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #222222;
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    .sheet-item-num {
+      display: inline-block;
+      background: #F7F7F7;
+      color: #717171;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .sheet-choice {
+      display: flex;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      margin-bottom: 5px;
+      color: #717171;
+    }
+    .sheet-choice.answer {
+      background: #F0FBF0;
+      border: 1.5px solid #008A05;
+      color: #222222;
+      font-weight: 600;
+    }
+    .sheet-choice-num { flex-shrink: 0; font-weight: 700; color: #B0B0B0; }
+    .sheet-choice.answer .sheet-choice-num { color: #008A05; }
+
     @media (max-width: 480px) {
       .home-title { font-size: 1.6rem; }
-      .subject-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .subject-grid { grid-template-columns: 1fr 1fr; }
       .mode-grid { grid-template-columns: 1fr; }
-      .subject-card .name { font-size: 0.72rem; }
+      .subject-card .name { font-size: 0.78rem; }
       .screen { padding: 20px 12px; }
     }
   </style>
@@ -594,10 +639,15 @@
       <div class="name">ESG와<br>미래가치 창출</div>
       <div class="count">46문제</div>
     </div>
+    <div class="subject-card" id="card-extra" onclick="toggleSubject('extra')">
+      <div class="icon">📝</div>
+      <div class="name">기출문제</div>
+      <div class="count">40문제</div>
+    </div>
     <div class="subject-card selected" id="card-both" onclick="selectBoth()">
       <div class="icon">🔀</div>
-      <div class="name">전체<br>랜덤</div>
-      <div class="count">176문제</div>
+      <div class="name">전체 랜덤</div>
+      <div class="count">216문제</div>
     </div>
   </div>
 
@@ -612,6 +662,11 @@
       <div class="mode-icon">🔍</div>
       <div class="mode-name">키워드 검색</div>
       <div class="mode-desc">키워드로 관련 문제를 모아서 확인</div>
+    </button>
+    <button class="mode-btn" onclick="showAnswerSheet()" style="grid-column: span 2;">
+      <div class="mode-icon">📋</div>
+      <div class="mode-name">문제 + 답 한번에 보기</div>
+      <div class="mode-desc">선택한 과목의 모든 문제와 정답을 한 페이지에서 확인</div>
     </button>
   </div>
 
@@ -670,6 +725,20 @@
   </div>
 </div>
 
+<!-- ══════════════ 문제+답 보기 화면 ══════════════ -->
+<div class="screen" id="answerSheetScreen">
+  <div class="wrong-note-header">
+    <div class="wrong-note-screen-title">📋 문제 + 답 보기</div>
+  </div>
+  <div class="sheet-filter" id="sheetFilter">
+    <button class="filter-btn active" id="sf-all" onclick="setSheetFilter('all')">전체</button>
+    <button class="filter-btn" id="sf-climate" onclick="setSheetFilter('climate')">🌍 기후변화</button>
+    <button class="filter-btn" id="sf-esg" onclick="setSheetFilter('esg')">📊 ESG</button>
+    <button class="filter-btn" id="sf-extra" onclick="setSheetFilter('extra')">📝 기출문제</button>
+  </div>
+  <div id="sheetContent"></div>
+</div>
+
 <!-- ══════════════ 오답노트 화면 ══════════════ -->
 <div class="screen" id="wrongNoteScreen">
   <div class="wrong-note-header">
@@ -706,6 +775,7 @@
 <script>
   // ── 상태 ──
   let selectedSubjects = ['climate', 'esg'];
+  let sheetFilter = 'all';
   let quizQuestions = [];
   let currentIdx = 0;
   let score = 0;
@@ -763,14 +833,15 @@
   }
 
   function selectBoth() {
-    selectedSubjects = ['climate', 'esg'];
+    selectedSubjects = ['climate', 'esg', 'extra'];
     updateSubjectCards();
   }
 
   function updateSubjectCards() {
     document.getElementById('card-climate').classList.toggle('selected', selectedSubjects.includes('climate'));
     document.getElementById('card-esg').classList.toggle('selected', selectedSubjects.includes('esg'));
-    const both = selectedSubjects.includes('climate') && selectedSubjects.includes('esg');
+    document.getElementById('card-extra').classList.toggle('selected', selectedSubjects.includes('extra'));
+    const both = selectedSubjects.includes('climate') && selectedSubjects.includes('esg') && selectedSubjects.includes('extra');
     document.getElementById('card-both').classList.toggle('selected', both);
   }
 
@@ -782,6 +853,9 @@
     }
     if (selectedSubjects.includes('esg')) {
       pool = pool.concat(questions.esg.map(q => ({...q, subject: 'esg'})));
+    }
+    if (selectedSubjects.includes('extra')) {
+      pool = pool.concat(questions.extra.map(q => ({...q, subject: 'extra'})));
     }
     if (pool.length === 0) { alert('과목을 선택해주세요!'); return; }
 
@@ -804,7 +878,7 @@
     document.getElementById('quizScore').textContent = `✅ ${score} / ${currentIdx}`;
     document.getElementById('progressFill').style.width = `${(currentIdx / total) * 100}%`;
 
-    const subLabel = q.subject === 'climate' ? '🌍 기후변화' : '📊 ESG';
+    const subLabel = q.subject === 'climate' ? '🌍 기후변화' : q.subject === 'esg' ? '📊 ESG' : '📝 기출문제';
     const weekLabel = q.week ? ` · ${q.week}주차` : '';
     document.getElementById('questionMeta').textContent = subLabel + weekLabel;
     document.getElementById('questionText').textContent = q.question;
@@ -880,6 +954,53 @@
     showScreen('resultScreen');
   }
 
+  // ── 문제+답 한번에 보기 ──
+  function showAnswerSheet() {
+    showScreen('answerSheetScreen');
+    // 현재 선택된 과목에 맞게 필터 초기화
+    if (selectedSubjects.length === 1) {
+      setSheetFilter(selectedSubjects[0]);
+    } else {
+      setSheetFilter('all');
+    }
+  }
+
+  function setSheetFilter(f) {
+    sheetFilter = f;
+    document.querySelectorAll('.sheet-filter .filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('sf-' + f).classList.add('active');
+    renderAnswerSheet();
+  }
+
+  function renderAnswerSheet() {
+    let pool = [];
+    if (sheetFilter === 'all' || sheetFilter === 'climate') pool = pool.concat(questions.climate.map(q => ({...q, subject:'climate'})));
+    if (sheetFilter === 'all' || sheetFilter === 'esg') pool = pool.concat(questions.esg.map(q => ({...q, subject:'esg'})));
+    if (sheetFilter === 'all' || sheetFilter === 'extra') pool = pool.concat(questions.extra.map(q => ({...q, subject:'extra'})));
+
+    const content = document.getElementById('sheetContent');
+    content.innerHTML = `<div class="search-count" style="margin-bottom:12px">총 <b>${pool.length}개</b> 문제</div>` +
+      pool.map((q, idx) => {
+        const subLabel = q.subject === 'climate' ? '🌍 기후변화' + (q.week ? ' ' + q.week + '주' : '') : q.subject === 'esg' ? '📊 ESG' : '📝 기출문제';
+        const badgeClass = q.subject === 'climate' ? 'badge-climate' : q.subject === 'esg' ? 'badge-esg' : 'badge-extra';
+        return `
+          <div class="sheet-item">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span class="sheet-item-num">Q${idx + 1}</span>
+              <span class="result-badge ${badgeClass}">${subLabel}</span>
+            </div>
+            <div class="sheet-item-q">${q.question}</div>
+            ${q.choices.map((c, i) => `
+              <div class="sheet-choice ${i + 1 === q.answer ? 'answer' : ''}">
+                <span class="sheet-choice-num">${i + 1}.</span>
+                <span>${c}${i + 1 === q.answer ? ' ✅' : ''}</span>
+              </div>
+            `).join('')}
+            ${q.explanation ? `<div class="result-explanation" style="margin-top:10px">💡 ${q.explanation}</div>` : ''}
+          </div>`;
+      }).join('');
+  }
+
   // ── 오답노트 화면 ──
   function showWrongNote() {
     showScreen('wrongNoteScreen');
@@ -900,7 +1021,7 @@
     btn.style.opacity = '1';
     btn.textContent = `틀린 문제 ${items.length}개 다시 풀기`;
     list.innerHTML = items.map((q, idx) => {
-      const subLabel = q.subject === 'climate' ? '🌍 기후변화' : '📊 ESG';
+      const subLabel = q.subject === 'climate' ? '🌍 기후변화' : q.subject === 'esg' ? '📊 ESG' : '📝 기출문제';
       return `
         <div class="wrong-item" id="wi-${idx}" onclick="toggleWrongItem(${idx})">
           <div class="wrong-item-header">
@@ -963,8 +1084,9 @@
     }
 
     let pool = [];
-    if (searchFilter !== 'esg') pool = pool.concat(questions.climate.map(q => ({...q, subject:'climate'})));
-    if (searchFilter !== 'climate') pool = pool.concat(questions.esg.map(q => ({...q, subject:'esg'})));
+    if (searchFilter !== 'esg' && searchFilter !== 'extra') pool = pool.concat(questions.climate.map(q => ({...q, subject:'climate'})));
+    if (searchFilter !== 'climate' && searchFilter !== 'extra') pool = pool.concat(questions.esg.map(q => ({...q, subject:'esg'})));
+    if (searchFilter !== 'climate' && searchFilter !== 'esg') pool = pool.concat(questions.extra.map(q => ({...q, subject:'extra'})));
 
     const results = pool.filter(q => {
       const text = [q.question, ...q.choices, q.explanation || ''].join(' ').toLowerCase();
@@ -984,8 +1106,8 @@
         ${results.map((q, idx) => `
           <div class="result-item" id="ri-${idx}" onclick="toggleResult(${idx})">
             <div class="result-item-header">
-              <span class="result-badge ${q.subject === 'climate' ? 'badge-climate' : 'badge-esg'}">
-                ${q.subject === 'climate' ? '🌍 기후변화' + (q.week ? ' ' + q.week + '주' : '') : '📊 ESG'}
+              <span class="result-badge ${q.subject === 'climate' ? 'badge-climate' : q.subject === 'esg' ? 'badge-esg' : 'badge-extra'}">
+                ${q.subject === 'climate' ? '🌍 기후변화' + (q.week ? ' ' + q.week + '주' : '') : q.subject === 'esg' ? '📊 ESG' : '📝 기출문제'}
               </span>
               <div class="result-item-question">${highlight(q.question)}</div>
             </div>
