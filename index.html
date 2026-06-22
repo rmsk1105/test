@@ -663,10 +663,15 @@
       <div class="mode-name">키워드 검색</div>
       <div class="mode-desc">키워드로 관련 문제를 모아서 확인</div>
     </button>
-    <button class="mode-btn" onclick="showAnswerSheet()" style="grid-column: span 2;">
+    <button class="mode-btn" onclick="startFullQuiz()">
+      <div class="mode-icon">📚</div>
+      <div class="mode-name">전체 풀기</div>
+      <div class="mode-desc">선택한 과목의 모든 문제를 순서대로 풀기</div>
+    </button>
+    <button class="mode-btn" onclick="showAnswerSheet()">
       <div class="mode-icon">📋</div>
-      <div class="mode-name">문제 + 답 한번에 보기</div>
-      <div class="mode-desc">선택한 과목의 모든 문제와 정답을 한 페이지에서 확인</div>
+      <div class="mode-name">문제 + 답 보기</div>
+      <div class="mode-desc">모든 문제와 정답을 한 페이지에서 확인</div>
     </button>
   </div>
 
@@ -843,6 +848,20 @@
     document.getElementById('card-extra').classList.toggle('selected', selectedSubjects.includes('extra'));
     const both = selectedSubjects.includes('climate') && selectedSubjects.includes('esg') && selectedSubjects.includes('extra');
     document.getElementById('card-both').classList.toggle('selected', both);
+  }
+
+  // ── 전체 풀기 ──
+  function startFullQuiz() {
+    let pool = [];
+    if (selectedSubjects.includes('climate')) pool = pool.concat(questions.climate.map(q => ({...q, subject:'climate'})));
+    if (selectedSubjects.includes('esg')) pool = pool.concat(questions.esg.map(q => ({...q, subject:'esg'})));
+    if (selectedSubjects.includes('extra')) pool = pool.concat(questions.extra.map(q => ({...q, subject:'extra'})));
+    if (pool.length === 0) { alert('과목을 선택해주세요!'); return; }
+    quizQuestions = pool; // 전체, 셔플 없음
+    currentIdx = 0;
+    score = 0;
+    showScreen('quizScreen');
+    renderQuestion();
   }
 
   // ── 퀴즈 시작 ──
